@@ -8,7 +8,6 @@ Cover:
 
 - valid registration
 - duplicate email
-- duplicate nickname
 - password hashing before persistence
 - valid login
 - invalid password
@@ -36,7 +35,6 @@ Cover:
 
 - current user retrieval
 - valid profile update
-- duplicate nickname rejection
 - soft delete
 - active session revocation after delete
 

@@ -6,11 +6,11 @@ import java.util.UUID
 interface UserRepository {
     fun findActiveById(id: UUID): UserEntity?
 
+    fun findByNormalizedEmail(normalizedEmail: String): UserEntity?
+
     fun findActiveByNormalizedEmail(normalizedEmail: String): UserEntity?
 
     fun existsByNormalizedEmail(normalizedEmail: String): Boolean
-
-    fun existsByNicknameIgnoreCase(nickname: String, excludeUserId: UUID? = null): Boolean
 
     fun save(user: UserEntity): UserEntity
 

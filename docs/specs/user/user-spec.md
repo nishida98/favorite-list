@@ -175,7 +175,7 @@ Fields:
 | `id` | UUID | Yes | Primary key |
 | `email` | String | Yes | Unique, normalized to lowercase |
 | `name` | String | Yes | User's full or display name |
-| `nickname` | String | Yes | Unique user nickname/handle |
+| `nickname` | String | Yes | User nickname/handle |
 | `password_hash` | String | Yes | Hashed password only |
 | `created_at` | Timestamp UTC | Yes | Set on creation |
 | `updated_at` | Timestamp UTC | Yes | Updated on changes |
@@ -185,7 +185,6 @@ Rules:
 
 - `email` must be normalized before persistence.
 - `email` must be unique.
-- `nickname` must be unique using case-insensitive comparison.
 - `password_hash` must never be returned by GraphQL.
 - Users with `deleted_at != null` are considered inactive/deleted.
 
@@ -234,7 +233,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
-    nickname VARCHAR(80) NOT NULL UNIQUE,
+    nickname VARCHAR(80) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
@@ -442,7 +441,6 @@ Validation:
 - `email` must be unique.
 - `name` is required.
 - `nickname` is required.
-- `nickname` must be unique.
 - `password` is required.
 - `password` must satisfy the configured password policy.
 
@@ -478,17 +476,15 @@ Possible errors:
 |---|---|
 | `BAD_USER_INPUT` | Invalid input or invalid fields |
 | `CONFLICT` | Email already exists |
-| `CONFLICT` | Nickname already exists |
 | `INTERNAL_SERVER_ERROR` | Unexpected internal error |
 
 Behavior:
 
 1. Validate input.
 2. Normalize email.
-3. Normalize nickname for case-insensitive uniqueness checks while preserving the submitted casing for display.
+3. Normalize nickname while preserving the submitted casing for display.
 4. Check email uniqueness.
-5. Check nickname uniqueness.
-6. Hash password.
+5. Hash password.
 7. Create user.
 8. Return public user fields only.
 
@@ -716,7 +712,6 @@ Rules:
 
 - `email` update is not included in MVP.
 - `password` update is not included in this mutation.
-- `nickname` must remain unique.
 - `updated_at` must be changed after a successful update.
 - At least one editable field must be present.
 
@@ -743,7 +738,6 @@ Possible errors:
 |---|---|
 | `BAD_USER_INPUT` | Invalid input |
 | `UNAUTHENTICATED` | Missing, invalid, expired, or revoked token |
-| `CONFLICT` | Nickname already exists |
 | `INTERNAL_SERVER_ERROR` | Unexpected internal error |
 
 ---
@@ -1081,7 +1075,7 @@ Rules:
 Log the following events:
 
 - User registration succeeded.
-- User registration failed due to duplicate email or nickname.
+- User registration failed due to duplicate email.
 - Login succeeded.
 - Login failed.
 - Token validation failed.
@@ -1232,7 +1226,6 @@ Backend
   -> Validate input
   -> Normalize email and nickname
   -> Check email uniqueness
-  -> Check nickname uniqueness
   -> Hash password
   -> Create user
   -> Return public user payload
@@ -1299,7 +1292,6 @@ AuthService
 - The password is stored as a hash.
 - The raw password is never returned in GraphQL responses.
 - Duplicate email registration returns a GraphQL `CONFLICT` error.
-- Duplicate nickname registration returns a GraphQL `CONFLICT` error.
 - Invalid input returns a GraphQL `BAD_USER_INPUT` error.
 - `created_at` and `updated_at` are set on creation.
 - `deleted_at` is null on creation.
@@ -1347,7 +1339,6 @@ AuthService:
 
 - Registers a valid user.
 - Rejects duplicate email.
-- Rejects duplicate nickname.
 - Hashes password before persistence.
 - Logs in with valid credentials.
 - Rejects invalid password.
@@ -1371,7 +1362,6 @@ UserService:
 
 - Returns authenticated user profile.
 - Updates name and nickname.
-- Rejects duplicate nickname.
 - Soft-deletes current user.
 - Revokes all sessions after soft delete.
 
@@ -1449,7 +1439,7 @@ Resolved for the MVP:
 
 1. Registration and login remain separate. `registerUser` does not issue a token.
 2. Refresh tokens are out of scope for MVP.
-3. Nickname uniqueness is case-insensitive.
+3. Nicknames do not need to be unique.
 4. Email change is out of scope for MVP.
 5. Soft-deleted emails remain reserved.
 6. Failed login attempts are retained for 90 days.

@@ -11,6 +11,10 @@ class JpaUserRepository(
 ) : UserRepository {
 
     @Transactional(readOnly = true)
+    override fun findByNormalizedEmail(normalizedEmail: String): UserEntity? =
+        springDataRepository.findByEmail(normalizedEmail)
+
+    @Transactional(readOnly = true)
     override fun findActiveById(id: UUID): UserEntity? =
         springDataRepository.findActiveById(id)
 
@@ -21,10 +25,6 @@ class JpaUserRepository(
     @Transactional(readOnly = true)
     override fun existsByNormalizedEmail(normalizedEmail: String): Boolean =
         springDataRepository.existsByEmail(normalizedEmail)
-
-    @Transactional(readOnly = true)
-    override fun existsByNicknameIgnoreCase(nickname: String, excludeUserId: UUID?): Boolean =
-        springDataRepository.existsByNicknameIgnoreCase(nickname, excludeUserId)
 
     @Transactional
     override fun save(user: UserEntity): UserEntity =

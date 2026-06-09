@@ -8,7 +8,7 @@ This document records the phase 0 foundation decisions for the user auth GraphQL
 |---|---|---|
 | Registration auto-login | Registration does not auto-login the user. `registerUser` returns only the created user payload. | `login` remains the only token-issuing mutation. |
 | Refresh tokens in MVP | Refresh tokens are out of scope for MVP. | `user_login_sessions` is designed so refresh token support can be added later without schema replacement. |
-| Nickname uniqueness | Nickname uniqueness is case-insensitive. Preserve the submitted casing for display, but compare and enforce uniqueness using a normalized lowercase value. | Persistence must enforce case-insensitive uniqueness, not just application-level checks. |
+| Nickname uniqueness | Nicknames do not need to be unique. Preserve the submitted casing for display and validate only format/length rules. | Persistence must not enforce nickname uniqueness. |
 | Email change | Email change is out of scope for MVP. | `updateMe` only supports `name` and `nickname`. |
 | Re-registration after delete | Soft-deleted emails remain reserved. | Soft delete does not release the unique email constraint. |
 | Failed login retention | Retain failed login attempts for 90 days. | Phase 4 cleanup work should remove or archive failed attempts older than 90 days. |
