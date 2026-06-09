@@ -7,6 +7,8 @@ Confirm the open questions that affect implementation behavior before coding:
 - registration does not auto-login the user
 - refresh tokens are out of scope for MVP
 - nicknames do not need to be unique
+- user ids use UUIDv7
+- password hashes must include a unique salt
 - email change is out of scope for MVP
 - soft-deleted emails remain reserved
 - failed login retention policy

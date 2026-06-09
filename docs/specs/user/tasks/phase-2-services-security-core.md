@@ -24,6 +24,7 @@ Implement a password hashing abstraction and adapter using the approved algorith
 Done when:
 
 - raw passwords can be hashed and verified
+- identical raw passwords produce different hashes because each hash includes a unique random salt
 - hashing details remain outside resolvers and domain services
 - raw passwords are never logged or persisted
 

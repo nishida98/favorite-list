@@ -17,11 +17,14 @@ class PasswordHashConfigurationTests {
             PasswordHashProperties(algorithm = PasswordHashAlgorithm.ARGON2ID),
         )
 
-        val passwordHash = passwordHasher.hash("Secret123")
+        val firstPasswordHash = passwordHasher.hash("Secret123")
+        val secondPasswordHash = passwordHasher.hash("Secret123")
 
-        assertNotEquals("Secret123", passwordHash)
-        assertTrue(passwordHasher.matches("Secret123", passwordHash))
-        assertFalse(passwordHasher.matches("Other123", passwordHash))
+        assertNotEquals("Secret123", firstPasswordHash)
+        assertNotEquals(firstPasswordHash, secondPasswordHash)
+        assertTrue(passwordHasher.matches("Secret123", firstPasswordHash))
+        assertTrue(passwordHasher.matches("Secret123", secondPasswordHash))
+        assertFalse(passwordHasher.matches("Other123", firstPasswordHash))
     }
 
     @Test
@@ -30,10 +33,13 @@ class PasswordHashConfigurationTests {
             PasswordHashProperties(algorithm = PasswordHashAlgorithm.BCRYPT),
         )
 
-        val passwordHash = passwordHasher.hash("Secret123")
+        val firstPasswordHash = passwordHasher.hash("Secret123")
+        val secondPasswordHash = passwordHasher.hash("Secret123")
 
-        assertNotEquals("Secret123", passwordHash)
-        assertTrue(passwordHasher.matches("Secret123", passwordHash))
-        assertFalse(passwordHasher.matches("Other123", passwordHash))
+        assertNotEquals("Secret123", firstPasswordHash)
+        assertNotEquals(firstPasswordHash, secondPasswordHash)
+        assertTrue(passwordHasher.matches("Secret123", firstPasswordHash))
+        assertTrue(passwordHasher.matches("Secret123", secondPasswordHash))
+        assertFalse(passwordHasher.matches("Other123", firstPasswordHash))
     }
 }
