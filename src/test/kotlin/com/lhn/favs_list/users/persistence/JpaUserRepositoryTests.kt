@@ -7,14 +7,11 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest(
@@ -58,8 +55,8 @@ class JpaUserRepositoryTests : PostgreSqlRepositoryTestSupport() {
     }
 
     @Test
-    fun `reserves normalized email and checks nickname uniqueness case insensitively`() {
-        val savedUser = userRepository.save(
+    fun `reserves normalized email without nickname uniqueness checks`() {
+        userRepository.save(
             userEntity(
                 email = "saved@example.com",
                 nickname = "CaseMix",
@@ -67,8 +64,6 @@ class JpaUserRepositoryTests : PostgreSqlRepositoryTestSupport() {
         )
 
         assertTrue(userRepository.existsByNormalizedEmail("saved@example.com"))
-        assertTrue(userRepository.existsByNicknameIgnoreCase("casemix"))
-        assertFalse(userRepository.existsByNicknameIgnoreCase("casemix", excludeUserId = savedUser.id))
     }
 
     @Test
@@ -85,23 +80,20 @@ class JpaUserRepositoryTests : PostgreSqlRepositoryTestSupport() {
     }
 
     @Test
-    fun `enforces case insensitive nickname uniqueness in the database`() {
+    fun `allows duplicate nicknames in the database`() {
         userRepository.save(
             userEntity(
                 email = "first@example.com",
                 nickname = "NickName",
             ),
         )
-
-        assertThrows<DataIntegrityViolationException> {
-            userRepository.save(
-                userEntity(
-                    email = "second@example.com",
-                    nickname = "nickname",
-                ),
-            )
-            entityManager.flush()
-        }
+        userRepository.save(
+            userEntity(
+                email = "second@example.com",
+                nickname = "nickname",
+            ),
+        )
+        entityManager.flush()
     }
 
     @Test

@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface SpringDataUserEntityRepository : JpaRepository<UserEntity, UUID> {
+    fun findByEmail(email: String): UserEntity?
+
     @Query(
         """
         select user
@@ -27,17 +29,4 @@ interface SpringDataUserEntityRepository : JpaRepository<UserEntity, UUID> {
     fun findActiveByEmail(@Param("email") email: String): UserEntity?
 
     fun existsByEmail(email: String): Boolean
-
-    @Query(
-        """
-        select count(user) > 0
-        from UserEntity user
-        where lower(user.nickname) = lower(:nickname)
-          and (:excludeUserId is null or user.id <> :excludeUserId)
-        """,
-    )
-    fun existsByNicknameIgnoreCase(
-        @Param("nickname") nickname: String,
-        @Param("excludeUserId") excludeUserId: UUID? = null,
-    ): Boolean
 }

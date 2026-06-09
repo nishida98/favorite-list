@@ -6,7 +6,7 @@ Confirm the open questions that affect implementation behavior before coding:
 
 - registration does not auto-login the user
 - refresh tokens are out of scope for MVP
-- nickname uniqueness is case-insensitive
+- nicknames do not need to be unique
 - email change is out of scope for MVP
 - soft-deleted emails remain reserved
 - failed login retention policy

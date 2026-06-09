@@ -1,6 +1,6 @@
 # Phase 1: Persistence and Data Model
 
-Follow the foundation decisions in [../foundation.md](../foundation.md), especially the case-insensitive nickname rule and reserved-email soft delete rule.
+Follow the foundation decisions in [../foundation.md](../foundation.md), especially the non-unique nickname rule and reserved-email soft delete rule.
 
 ## T1.1 Create `users` persistence model
 
@@ -42,7 +42,7 @@ Create migrations for:
 Done when:
 
 - schema matches the spec
-- unique constraints exist for email, nickname, and `token_jti`
+- unique constraints exist for email and `token_jti`
 - timestamps are present on both tables
 
 ## T1.4 Implement user repository layer
@@ -52,7 +52,6 @@ Repository responsibilities:
 - find active user by id
 - find active user by normalized email
 - check email uniqueness
-- check nickname uniqueness
 - save user
 - update user
 
@@ -60,6 +59,7 @@ Done when:
 
 - repository methods cover the service use cases in the spec
 - soft-deleted users are excluded where required
+- nickname lookups are not required for uniqueness enforcement
 
 ## T1.5 Implement login session repository layer
 
