@@ -1,0 +1,61 @@
+scalar DateTime
+scalar UUID
+
+directive @authenticated on FIELD_DEFINITION
+
+type Query {
+  me: User! @authenticated
+}
+
+type Mutation {
+  registerUser(input: RegisterUserInput!): RegisterUserPayload!
+  login(input: LoginInput!): LoginPayload!
+  logout: LogoutPayload! @authenticated
+  updateMe(input: UpdateMeInput!): User! @authenticated
+  deleteMe: DeleteMePayload! @authenticated
+}
+
+type User {
+  id: UUID!
+  email: String!
+  name: String!
+  nickname: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input RegisterUserInput {
+  email: String!
+  name: String!
+  nickname: String!
+  password: String!
+}
+
+type RegisterUserPayload {
+  user: User!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type LoginPayload {
+  accessToken: String!
+  tokenType: String!
+  expiresIn: Int!
+  user: User!
+}
+
+input UpdateMeInput {
+  name: String
+  nickname: String
+}
+
+type LogoutPayload {
+  success: Boolean!
+}
+
+type DeleteMePayload {
+  success: Boolean!
+}
