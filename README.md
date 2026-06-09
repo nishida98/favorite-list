@@ -1,5 +1,7 @@
 # Favs List
 
+> Disclaimer: this project is vibe coded.
+
 Favs List is an application for saving the things people like in organized personal or shared lists.
 
 The main idea is simple: people often discover something they want to remember later, but the important details get lost. This application gives them a place to register those favorites with context, so the list is useful when they come back to it.
