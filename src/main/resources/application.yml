@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: favs-list
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/favs_list_db}
+    username: ${DB_USERNAME:favs_list_app_user}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  auth:
+    jwt:
+      issuer: ${JWT_ISSUER:favs-list-api}
+      audience: ${JWT_AUDIENCE:favs-list-client}
+      access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
+      secret: ${JWT_SECRET:change-me-for-local-dev}
+    password:
+      algorithm: ${PASSWORD_HASH_ALGORITHM:argon2id}
