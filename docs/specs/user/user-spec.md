@@ -110,6 +110,8 @@ Use a strong password hashing algorithm:
 
 - Preferred: Argon2id
 - Acceptable: bcrypt with a strong work factor
+- Each password hash must include a unique random salt
+- The salt may be embedded in the encoded password hash; a separate salt column is not required
 
 The user table must store only `password_hash`, never `password`.
 
@@ -172,7 +174,7 @@ Fields:
 
 | Field | Type | Required | Notes |
 |---|---:|:---:|---|
-| `id` | UUID | Yes | Primary key |
+| `id` | UUID | Yes | Primary key generated as UUIDv7 |
 | `email` | String | Yes | Unique, normalized to lowercase |
 | `name` | String | Yes | User's full or display name |
 | `nickname` | String | Yes | User nickname/handle |
@@ -185,6 +187,7 @@ Rules:
 
 - `email` must be normalized before persistence.
 - `email` must be unique.
+- application-generated user ids must use UUIDv7.
 - `password_hash` must never be returned by GraphQL.
 - Users with `deleted_at != null` are considered inactive/deleted.
 
@@ -1172,7 +1175,6 @@ Optional environment variables:
 - Minimum length: 3 characters.
 - Maximum length: 80 characters.
 - Allowed characters: letters, numbers, underscore, hyphen, and dot.
-- Must be unique.
 
 Suggested regex:
 
@@ -1290,6 +1292,7 @@ AuthService
 
 - A user can register with valid email, name, nickname, and password using the `registerUser` mutation.
 - The password is stored as a hash.
+- The password hash includes a unique random salt.
 - The raw password is never returned in GraphQL responses.
 - Duplicate email registration returns a GraphQL `CONFLICT` error.
 - Invalid input returns a GraphQL `BAD_USER_INPUT` error.
@@ -1440,15 +1443,17 @@ Resolved for the MVP:
 1. Registration and login remain separate. `registerUser` does not issue a token.
 2. Refresh tokens are out of scope for MVP.
 3. Nicknames do not need to be unique.
-4. Email change is out of scope for MVP.
-5. Soft-deleted emails remain reserved.
-6. Failed login attempts are retained for 90 days.
-7. The login session table serves both audit and active-session use cases in MVP.
-8. Frontend token storage remains a frontend architecture decision; the backend contract stays `Authorization: Bearer <token>`.
-9. GraphQL introspection should be disabled in public production environments unless explicitly protected.
-10. The API uses schema-first GraphQL.
-11. `deletedAt` is not exposed in the public GraphQL `User` type for MVP.
-12. Persisted GraphQL queries are out of scope for MVP.
+4. Application-generated user ids use UUIDv7.
+5. Password hashes include a unique random salt.
+6. Email change is out of scope for MVP.
+7. Soft-deleted emails remain reserved.
+8. Failed login attempts are retained for 90 days.
+9. The login session table serves both audit and active-session use cases in MVP.
+10. Frontend token storage remains a frontend architecture decision; the backend contract stays `Authorization: Bearer <token>`.
+11. GraphQL introspection should be disabled in public production environments unless explicitly protected.
+12. The API uses schema-first GraphQL.
+13. `deletedAt` is not exposed in the public GraphQL `User` type for MVP.
+14. Persisted GraphQL queries are out of scope for MVP.
 
 ---
 

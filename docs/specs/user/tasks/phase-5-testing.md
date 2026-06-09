@@ -9,6 +9,7 @@ Cover:
 - valid registration
 - duplicate email
 - password hashing before persistence
+- salted password hashing produces different hashes for the same raw password
 - valid login
 - invalid password
 - unknown email
