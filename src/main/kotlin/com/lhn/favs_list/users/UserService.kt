@@ -1,6 +1,7 @@
 package com.lhn.favs_list.users
 
 import com.lhn.favs_list.sessions.UserLoginSessionRepository
+import com.lhn.favs_list.shared.logging.SecurityEventLogger
 import com.lhn.favs_list.shared.validation.UserInputValidator
 import java.time.Clock
 import java.util.UUID
@@ -13,6 +14,7 @@ class UserService(
     private val sessionRepository: UserLoginSessionRepository,
     private val userInputValidator: UserInputValidator,
     private val clock: Clock,
+    private val securityEventLogger: SecurityEventLogger,
 ) {
 
     @Transactional(readOnly = true)
@@ -50,10 +52,16 @@ class UserService(
         user.deletedAt = now
         user.updatedAt = now
         userRepository.update(user)
-        sessionRepository.revokeActiveSessionsByUserId(
+        val revokedSessionCount = sessionRepository.revokeActiveSessionsByUserId(
             userId = userId,
             revokedAt = now,
             activeAt = now,
+        )
+        securityEventLogger.userSoftDeleted(userId)
+        securityEventLogger.sessionRevocationSucceeded(
+            userId = userId,
+            revokedSessionCount = revokedSessionCount,
+            trigger = "USER_SOFT_DELETE",
         )
 
         return true

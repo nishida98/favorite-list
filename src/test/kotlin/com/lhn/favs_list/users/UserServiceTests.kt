@@ -2,10 +2,12 @@ package com.lhn.favs_list.users
 
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionEntity
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionStatus
+import com.lhn.favs_list.shared.logging.SecurityEventLogger
 import com.lhn.favs_list.shared.validation.InvalidInputException
 import com.lhn.favs_list.shared.validation.UserInputValidator
 import com.lhn.favs_list.testing.InMemoryUserLoginSessionRepository
 import com.lhn.favs_list.testing.InMemoryUserRepository
+import com.lhn.favs_list.testing.RecordingSecurityEventSink
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -19,6 +21,8 @@ class UserServiceTests {
 
     private val userRepository = InMemoryUserRepository()
     private val sessionRepository = InMemoryUserLoginSessionRepository()
+    private val securityEventSink = RecordingSecurityEventSink()
+    private val securityEventLogger = SecurityEventLogger(securityEventSink)
     private val clock = Clock.fixed(Instant.parse("2026-06-08T12:00:00Z"), ZoneOffset.UTC)
 
     @Test
@@ -122,6 +126,10 @@ class UserServiceTests {
         assertNotNull(persistedUser?.deletedAt)
         assertEquals(Instant.parse("2026-06-08T12:00:00Z"), persistedUser?.updatedAt)
         assertEquals(UserLoginSessionStatus.REVOKED, revokedSession?.status)
+        assertEquals(
+            listOf("auth_user_soft_delete", "auth_session_revocation_success"),
+            securityEventSink.entries.map { it.event },
+        )
     }
 
     private fun userService() =
@@ -130,6 +138,7 @@ class UserServiceTests {
             sessionRepository = sessionRepository,
             userInputValidator = UserInputValidator(),
             clock = clock,
+            securityEventLogger = securityEventLogger,
         )
 
     private fun activeUser(

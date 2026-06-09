@@ -1,10 +1,12 @@
 package com.lhn.favs_list.auth
 
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionStatus
+import com.lhn.favs_list.shared.logging.SecurityEventLogger
 import com.lhn.favs_list.shared.validation.UserInputValidator
 import com.lhn.favs_list.testing.InMemoryUserLoginSessionRepository
 import com.lhn.favs_list.testing.InMemoryUserRepository
 import com.lhn.favs_list.testing.QueueUuidGenerator
+import com.lhn.favs_list.testing.RecordingSecurityEventSink
 import com.lhn.favs_list.testing.StubPasswordHasher
 import com.lhn.favs_list.testing.StubTokenService
 import com.lhn.favs_list.users.EmailAlreadyInUseException
@@ -25,6 +27,8 @@ class AuthServiceTests {
     private val userRepository = InMemoryUserRepository()
     private val sessionRepository = InMemoryUserLoginSessionRepository()
     private val passwordHasher = StubPasswordHasher()
+    private val securityEventSink = RecordingSecurityEventSink()
+    private val securityEventLogger = SecurityEventLogger(securityEventSink)
     private val tokenService = StubTokenService(
         issuedAt = Instant.parse("2026-06-08T12:00:00Z"),
         expiresAt = Instant.parse("2026-06-08T12:15:00Z"),
@@ -52,6 +56,7 @@ class AuthServiceTests {
         assertEquals("Test User", registeredUser.name)
         assertEquals("Test.User", registeredUser.nickname)
         assertEquals("hash::Secret123", userRepository.findByNormalizedEmail("test.user@example.com")?.passwordHash)
+        assertEquals("auth_register_success", securityEventSink.entries.single().event)
     }
 
     @Test
@@ -84,6 +89,7 @@ class AuthServiceTests {
 
         assertEquals(duplicateNicknameUserId, registeredUser.id)
         assertEquals("takennick", registeredUser.nickname)
+        assertEquals("auth_register_failure", securityEventSink.entries.first().event)
     }
 
     @Test
@@ -125,6 +131,10 @@ class AuthServiceTests {
         assertEquals(deletedUser.id, sessionRepository.failedAttempts[1].userId)
         assertEquals(LoginFailureReason.INVALID_PASSWORD.name, sessionRepository.failedAttempts[2].failureReason)
         assertEquals(activeUser.id, sessionRepository.failedAttempts[2].userId)
+        assertEquals(
+            listOf("auth_login_failure", "auth_login_failure", "auth_login_failure"),
+            securityEventSink.entries.map { it.event },
+        )
     }
 
     @Test
@@ -161,6 +171,7 @@ class AuthServiceTests {
         assertEquals("127.0.0.1", persistedSession.ipAddress)
         assertEquals("JUnit", persistedSession.userAgent)
         assertTrue(persistedSession.tokenHash?.isNotBlank() == true)
+        assertEquals("auth_login_success", securityEventSink.entries.single().event)
     }
 
     @Test
@@ -178,10 +189,14 @@ class AuthServiceTests {
         )
 
         authService.login(LoginCommand(email = "logout@example.com", password = "Secret123"))
-        val revoked = authService.logout(tokenJti.toString())
+        val revoked = authService.logout(user.id, tokenJti.toString())
 
         assertTrue(revoked)
         assertEquals(UserLoginSessionStatus.REVOKED, sessionRepository.findByJti(tokenJti.toString())?.status)
+        assertEquals(
+            listOf("auth_login_success", "auth_logout_success"),
+            securityEventSink.entries.map { it.event },
+        )
     }
 
     private fun authService(uuidGenerator: QueueUuidGenerator): AuthService =
@@ -193,6 +208,7 @@ class AuthServiceTests {
             tokenService = tokenService,
             uuidGenerator = uuidGenerator,
             clock = clock,
+            securityEventLogger = securityEventLogger,
         )
 
     private fun activeUser(

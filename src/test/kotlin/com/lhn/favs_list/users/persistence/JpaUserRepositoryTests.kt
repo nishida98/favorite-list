@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional
 @SpringBootTest(
     properties = [
         "spring.jpa.hibernate.ddl-auto=validate",
+        "app.auth.jwt.secret=test-secret-value-12345678901234567890",
+        "app.cors.allowed-origins[0]=https://app.example.test",
     ],
 )
 @Transactional

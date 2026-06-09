@@ -65,7 +65,10 @@ class AuthResolver(
         val authenticatedSession = authGuard.requireAuthenticated(requestContext)
 
         return LogoutPayload(
-            success = authService.logout(authenticatedSession.sessionJti),
+            success = authService.logout(
+                userId = authenticatedSession.userId,
+                currentSessionJti = authenticatedSession.sessionJti,
+            ),
         )
     }
 }

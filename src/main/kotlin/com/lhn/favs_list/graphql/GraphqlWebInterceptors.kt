@@ -70,6 +70,8 @@ class GraphqlErrorResponseInterceptor : WebGraphQlInterceptor {
                 ErrorType.InvalidSyntax,
                 ErrorType.ValidationError,
                 ErrorType.NullValueInNonNullableField,
+                ErrorType.ExecutionAborted,
+                ErrorType.OperationNotSupported,
                 -> "BAD_USER_INPUT"
 
                 else -> "INTERNAL_SERVER_ERROR"

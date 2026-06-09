@@ -11,7 +11,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters
 import org.springframework.security.oauth2.jwt.JwtException
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 
 class JwtTokenService(
     private val jwtEncoder: JwtEncoder,
@@ -31,7 +30,7 @@ class JwtTokenService(
             .issuer(authJwtProperties.issuer)
             .audience(listOf(authJwtProperties.audience))
             .build()
-        val headers = JwsHeader.with(MacAlgorithm.HS256).build()
+        val headers = JwsHeader.with(authJwtProperties.jwsAlgorithm()).build()
         val token = jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).tokenValue
 
         return IssuedAccessToken(

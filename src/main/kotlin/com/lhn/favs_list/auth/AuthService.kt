@@ -4,6 +4,7 @@ import com.lhn.favs_list.sessions.UserLoginSessionRepository
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionEntity
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionStatus
 import com.lhn.favs_list.shared.ids.UuidGenerator
+import com.lhn.favs_list.shared.logging.SecurityEventLogger
 import com.lhn.favs_list.shared.validation.UserInputValidator
 import com.lhn.favs_list.users.EmailAlreadyInUseException
 import com.lhn.favs_list.users.UserProfile
@@ -27,6 +28,7 @@ class AuthService(
     private val tokenService: TokenService,
     private val uuidGenerator: UuidGenerator,
     private val clock: Clock,
+    private val securityEventLogger: SecurityEventLogger,
 ) {
 
     @Transactional
@@ -39,6 +41,10 @@ class AuthService(
         )
 
         if (userRepository.existsByNormalizedEmail(normalizedInput.email)) {
+            securityEventLogger.registrationFailed(
+                email = normalizedInput.email,
+                reason = "DUPLICATE_EMAIL",
+            )
             throw EmailAlreadyInUseException(normalizedInput.email)
         }
 
@@ -56,11 +62,23 @@ class AuthService(
         val savedUser = try {
             userRepository.save(user)
         } catch (exception: DataIntegrityViolationException) {
-            throw resolveRegistrationConflict(
+            val resolvedException = resolveRegistrationConflict(
                 email = normalizedInput.email,
                 cause = exception,
             )
+            if (resolvedException is EmailAlreadyInUseException) {
+                securityEventLogger.registrationFailed(
+                    email = normalizedInput.email,
+                    reason = "DUPLICATE_EMAIL",
+                )
+            }
+            throw resolvedException
         }
+
+        securityEventLogger.registrationSucceeded(
+            userId = savedUser.id,
+            email = savedUser.email,
+        )
 
         return savedUser.toUserProfile()
     }
@@ -126,6 +144,12 @@ class AuthService(
             updatedAt = issuedAccessToken.issuedAt,
         )
         sessionRepository.saveSuccessfulSession(session)
+        securityEventLogger.loginSucceeded(
+            userId = user.id,
+            sessionId = session.id,
+            tokenJti = issuedAccessToken.jti,
+            requestMetadata = requestMetadata,
+        )
 
         return LoginResult(
             accessToken = issuedAccessToken.token,
@@ -136,14 +160,23 @@ class AuthService(
     }
 
     @Transactional
-    fun logout(currentSessionJti: String): Boolean {
+    fun logout(
+        userId: java.util.UUID,
+        currentSessionJti: String,
+    ): Boolean {
         val now = clock.instant()
-        sessionRepository.revokeByJti(
+        val revoked = sessionRepository.revokeByJti(
             tokenJti = currentSessionJti,
             revokedAt = now,
             activeAt = now,
         )
-        return true
+        if (revoked) {
+            securityEventLogger.logoutSucceeded(
+                userId = userId,
+                sessionJti = currentSessionJti,
+            )
+        }
+        return revoked
     }
 
     private fun resolveRegistrationConflict(
@@ -177,6 +210,12 @@ class AuthService(
         )
 
         sessionRepository.saveFailedLoginAttempt(failedAttempt)
+        securityEventLogger.loginFailed(
+            attemptedEmail = attemptedEmail,
+            userId = user?.id,
+            reason = failureReason,
+            requestMetadata = requestMetadata,
+        )
     }
 
     private fun hashToken(token: String): String =
@@ -205,6 +244,7 @@ data class LoginResult(
 )
 
 data class RequestMetadata(
+    val requestId: String? = null,
     val ipAddress: String? = null,
     val userAgent: String? = null,
 )

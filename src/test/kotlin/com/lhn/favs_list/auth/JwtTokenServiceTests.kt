@@ -1,9 +1,11 @@
 package com.lhn.favs_list.auth
 
 import com.lhn.favs_list.shared.config.AuthJwtProperties
+import java.security.KeyPairGenerator
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.Base64
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -93,6 +95,28 @@ class JwtTokenServiceTests {
         }
     }
 
+    @Test
+    fun `creates and validates RS256 tokens when an RSA private key is configured`() {
+        val clock = fixedClock("2026-06-08T12:00:00Z")
+        val tokenService = tokenService(
+            authJwtProperties = jwtProperties(
+                secret = null,
+                privateKey = rsaPrivateKeyPem(),
+            ),
+            clock = clock,
+        )
+
+        val token = tokenService.createAccessToken(
+            userId = UUID.fromString("f8917d4b-47f6-4d1e-bfe3-36244c7760f0"),
+            tokenJti = "rsa-session",
+        )
+        val claims = tokenService.validateAccessToken(token.token)
+
+        assertEquals("rsa-session", claims.jti)
+        assertEquals("favs-list-api", claims.issuer)
+        assertTrue(claims.audience.contains("favs-list-client"))
+    }
+
     private fun tokenService(
         authJwtProperties: AuthJwtProperties,
         clock: Clock,
@@ -112,13 +136,25 @@ class JwtTokenServiceTests {
         issuer: String = "favs-list-api",
         audience: String = "favs-list-client",
         accessTokenTtlSeconds: Long = 900,
-        secret: String = "change-me-for-local-dev-1234567890",
+        secret: String? = "change-me-for-local-dev-1234567890",
+        privateKey: String? = null,
     ) = AuthJwtProperties(
         issuer = issuer,
         audience = audience,
         accessTokenTtlSeconds = accessTokenTtlSeconds,
         secret = secret,
+        privateKey = privateKey,
     )
+
+    private fun rsaPrivateKeyPem(): String {
+        val generator = KeyPairGenerator.getInstance("RSA")
+        generator.initialize(2048)
+        val privateKey = generator.generateKeyPair().private
+        val encoded = Base64.getMimeEncoder(64, "\n".toByteArray())
+            .encodeToString(privateKey.encoded)
+
+        return "-----BEGIN PRIVATE KEY-----\n$encoded\n-----END PRIVATE KEY-----"
+    }
 
     private fun fixedClock(instant: String): Clock =
         Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)

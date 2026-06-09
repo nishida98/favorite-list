@@ -7,6 +7,7 @@ import com.lhn.favs_list.graphql.GRAPHQL_REQUEST_CONTEXT_KEY
 import com.lhn.favs_list.graphql.GraphqlAuthentication
 import com.lhn.favs_list.graphql.GraphqlRequestContext
 import com.lhn.favs_list.graphql.UnauthenticatedGraphqlException
+import com.lhn.favs_list.shared.logging.SecurityEventLogger
 import com.lhn.favs_list.sessions.UserLoginSessionRepository
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionStatus
 import com.lhn.favs_list.users.UserRepository
@@ -21,6 +22,7 @@ class GraphqlAuthenticationContextFactory(
     private val sessionRepository: UserLoginSessionRepository,
     private val userRepository: UserRepository,
     private val clock: Clock,
+    private val securityEventLogger: SecurityEventLogger,
 ) {
 
     fun create(
@@ -28,7 +30,11 @@ class GraphqlAuthenticationContextFactory(
         headers: HttpHeaders,
         remoteAddress: String?,
     ): GraphqlRequestContext {
-        val authentication = resolveAuthentication(headers)
+        val authentication = resolveAuthentication(
+            requestId = requestId,
+            headers = headers,
+            remoteAddress = remoteAddress,
+        )
 
         return GraphqlRequestContext(
             requestId = requestId,
@@ -38,10 +44,19 @@ class GraphqlAuthenticationContextFactory(
         )
     }
 
-    private fun resolveAuthentication(headers: HttpHeaders): GraphqlAuthentication {
+    private fun resolveAuthentication(
+        requestId: String,
+        headers: HttpHeaders,
+        remoteAddress: String?,
+    ): GraphqlAuthentication {
         val token = try {
             AuthorizationHeaderBearerTokenExtractor.extract(headers.getFirst(HttpHeaders.AUTHORIZATION))
         } catch (exception: UnauthenticatedGraphqlException) {
+            securityEventLogger.tokenValidationFailed(
+                requestId = requestId,
+                ipAddress = remoteAddress,
+                reason = "INVALID_AUTHORIZATION_HEADER",
+            )
             return GraphqlAuthentication.Failed(exception)
         }
 
@@ -52,6 +67,11 @@ class GraphqlAuthenticationContextFactory(
         val claims = try {
             tokenService.validateAccessToken(token)
         } catch (exception: InvalidAccessTokenException) {
+            securityEventLogger.tokenValidationFailed(
+                requestId = requestId,
+                ipAddress = remoteAddress,
+                reason = "INVALID_ACCESS_TOKEN",
+            )
             return GraphqlAuthentication.Failed(
                 UnauthenticatedGraphqlException(
                     message = "Access token is invalid",
@@ -61,8 +81,10 @@ class GraphqlAuthenticationContextFactory(
         }
 
         val session = sessionRepository.findByJti(claims.jti)
-            ?: return GraphqlAuthentication.Failed(
-                UnauthenticatedGraphqlException("Access token is invalid"),
+            ?: return authenticationFailure(
+                requestId = requestId,
+                remoteAddress = remoteAddress,
+                reason = "SESSION_NOT_FOUND",
             )
         val now = clock.instant()
         if (session.status != UserLoginSessionStatus.SUCCESS ||
@@ -70,13 +92,17 @@ class GraphqlAuthenticationContextFactory(
             session.expiresAt?.let { !it.isAfter(now) } == true ||
             session.userId != claims.userId
         ) {
-            return GraphqlAuthentication.Failed(
-                UnauthenticatedGraphqlException("Access token is invalid"),
+            return authenticationFailure(
+                requestId = requestId,
+                remoteAddress = remoteAddress,
+                reason = "SESSION_INVALID",
             )
         }
         if (userRepository.findActiveById(claims.userId) == null) {
-            return GraphqlAuthentication.Failed(
-                UnauthenticatedGraphqlException("Access token is invalid"),
+            return authenticationFailure(
+                requestId = requestId,
+                remoteAddress = remoteAddress,
+                reason = "USER_NOT_ACTIVE",
             )
         }
 
@@ -84,6 +110,21 @@ class GraphqlAuthenticationContextFactory(
             userId = claims.userId,
             sessionId = session.id,
             sessionJti = claims.jti,
+        )
+    }
+
+    private fun authenticationFailure(
+        requestId: String,
+        remoteAddress: String?,
+        reason: String,
+    ): GraphqlAuthentication.Failed {
+        securityEventLogger.tokenValidationFailed(
+            requestId = requestId,
+            ipAddress = remoteAddress,
+            reason = reason,
+        )
+        return GraphqlAuthentication.Failed(
+            UnauthenticatedGraphqlException("Access token is invalid"),
         )
     }
 }
@@ -124,6 +165,7 @@ fun GraphQLContext.requestContext(): GraphqlRequestContext? =
 
 fun GraphqlRequestContext.toRequestMetadata(): RequestMetadata =
     RequestMetadata(
+        requestId = requestId,
         ipAddress = ipAddress,
         userAgent = userAgent,
     )

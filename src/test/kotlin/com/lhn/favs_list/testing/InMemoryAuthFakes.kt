@@ -3,6 +3,8 @@ package com.lhn.favs_list.testing
 import com.lhn.favs_list.auth.IssuedAccessToken
 import com.lhn.favs_list.auth.PasswordHasher
 import com.lhn.favs_list.auth.TokenService
+import com.lhn.favs_list.shared.logging.SecurityEventLogEntry
+import com.lhn.favs_list.shared.logging.SecurityEventSink
 import com.lhn.favs_list.sessions.UserLoginSessionRepository
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionEntity
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionStatus
@@ -139,4 +141,12 @@ class QueueUuidGenerator(vararg uuids: UUID) : UuidGenerator {
         } else {
             queue.removeFirst()
         }
+}
+
+class RecordingSecurityEventSink : SecurityEventSink {
+    val entries = mutableListOf<SecurityEventLogEntry>()
+
+    override fun publish(entry: SecurityEventLogEntry) {
+        entries += entry
+    }
 }

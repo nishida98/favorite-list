@@ -7,10 +7,12 @@ import com.lhn.favs_list.auth.TokenService
 import com.lhn.favs_list.graphql.GraphqlAuthentication
 import com.lhn.favs_list.graphql.GraphqlRequestContext
 import com.lhn.favs_list.graphql.UnauthenticatedGraphqlException
+import com.lhn.favs_list.shared.logging.SecurityEventLogger
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionEntity
 import com.lhn.favs_list.sessions.persistence.UserLoginSessionStatus
 import com.lhn.favs_list.testing.InMemoryUserLoginSessionRepository
 import com.lhn.favs_list.testing.InMemoryUserRepository
+import com.lhn.favs_list.testing.RecordingSecurityEventSink
 import com.lhn.favs_list.users.persistence.UserEntity
 import java.time.Clock
 import java.time.Instant
@@ -28,11 +30,13 @@ class GraphqlAuthenticationSupportTests {
     private val userRepository = InMemoryUserRepository()
     private val sessionRepository = InMemoryUserLoginSessionRepository()
     private val tokenService = StubValidatingTokenService()
+    private val securityEventSink = RecordingSecurityEventSink()
     private val factory = GraphqlAuthenticationContextFactory(
         tokenService = tokenService,
         sessionRepository = sessionRepository,
         userRepository = userRepository,
         clock = clock,
+        securityEventLogger = SecurityEventLogger(securityEventSink),
     )
     private val authGuard = GraphqlAuthGuard()
 
@@ -68,6 +72,7 @@ class GraphqlAuthenticationSupportTests {
 
         val failure = assertIs<GraphqlAuthentication.Failed>(requestContext.authentication)
         assertEquals("Authorization header must use Bearer authentication", failure.cause.message)
+        assertEquals("auth_token_validation_failure", securityEventSink.entries.single().event)
     }
 
     @Test
@@ -158,6 +163,7 @@ class GraphqlAuthenticationSupportTests {
 
         val failure = assertIs<GraphqlAuthentication.Failed>(requestContext.authentication)
         assertEquals("Access token is invalid", failure.cause.message)
+        assertEquals("auth_token_validation_failure", securityEventSink.entries.single().event)
     }
 
     @Test

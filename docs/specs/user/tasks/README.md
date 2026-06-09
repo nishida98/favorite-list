@@ -45,3 +45,4 @@ This backlog covers the MVP defined in `user-spec.md` for:
 - Downstream phases must follow the resolved decisions in [../foundation.md](../foundation.md).
 - The current scaffold does not yet show migration, JWT, or password-hashing choices, so those need explicit selection first.
 - Login throttling is specified conditionally and may require infrastructure decisions outside application code.
+- MVP decision for phase 4: application-level login throttling remains deferred until shared infrastructure support is approved. `LOGIN_RATE_LIMIT_PER_MINUTE` is bound for future rollout, but request throttling is not enforced in-process yet.
