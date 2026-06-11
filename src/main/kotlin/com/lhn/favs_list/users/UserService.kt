@@ -17,6 +17,7 @@ class UserService(
     private val securityEventLogger: SecurityEventLogger,
 ) {
 
+
     @Transactional(readOnly = true)
     fun getCurrentUser(userId: UUID): UserProfile =
         userRepository.findActiveById(userId)?.toUserProfile()
